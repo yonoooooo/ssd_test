@@ -98,9 +98,9 @@ jobs:
           echo "Files in the tests directory:"
           ls -ltra tests/
       
-      # UNIT TESTS
-      - name: Run unit tests
-        run: npm test                       # Run Mocha unit tests defined in package.json (Specified "test": "mocha tests/*.js")
+      # INTEGRATION TESTS
+      - name: Run Integration Tests
+        run: npm test                       
       
 
       # SELENIUM TESTS (UI Testing)

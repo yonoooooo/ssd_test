@@ -4,8 +4,6 @@ import pluginSecurity from "eslint-plugin-security";
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-
-  
   {
     files: ["tests/**/*.js", "tests/**/*.mjs"],
     languageOptions: {
@@ -19,8 +17,7 @@ export default [
         afterEach: "readonly"
       }
     }
-  }
-  ,
+  },
   {
     files: ["**/*.{js,mjs,cjs,jsx}"],
     languageOptions: {
@@ -38,6 +35,10 @@ export default [
     rules: {
       ...pluginJs.configs.recommended.rules,
       "security/detect-eval-with-expression": "error",
+      "security/detect-unsafe-regex": "error",
+      "security/detect-non-literal-regexp": "error",
+      "security/detect-buffer-noassert": "error",
+      "security/detect-child-process": "error"
     }
   },
   // Browser-specific config

@@ -1,7 +1,11 @@
 import request from 'supertest';
 import { expect } from 'chai';
-import app from '../src/server.js'; // adjust if your structure is different
+import app from '../src/server.js'; // Adjust path if needed
+import { validateInput } from '../src/utils/functions.js'; // Add your validator path
 
+// ---------------------
+// Integration Tests
+// ---------------------
 describe('Integration Tests for /index_submit', () => {
 
   it('should render result page for valid input', async () => {
@@ -39,6 +43,38 @@ describe('Integration Tests for /index_submit', () => {
 
     expect(res.status).to.equal(302);
     expect(res.headers.location).to.equal('/');
+  });
+
+});
+
+// ---------------------
+// Unit Tests for validateInput
+// ---------------------
+describe('Unit Tests for validateInput()', () => {
+
+  it('should return valid for clean input', () => {
+    const result = validateInput('hello world');
+    expect(result).to.deep.equal({ valid: true });
+  });
+
+  it('should detect XSS (script tag)', () => {
+    const result = validateInput('<script>alert(1)</script>');
+    expect(result).to.deep.equal({ valid: false, reason: 'xss' });
+  });
+
+  it('should detect SQL injection (tautology)', () => {
+    const result = validateInput("' OR '1'='1");
+    expect(result).to.deep.equal({ valid: false, reason: 'sql' });
+  });
+
+  it('should detect SQL injection (DROP statement)', () => {
+    const result = validateInput('DROP TABLE users');
+    expect(result).to.deep.equal({ valid: false, reason: 'sql' });
+  });
+
+  it('should reject non-string input (null)', () => {
+    const result = validateInput(null);
+    expect(result).to.deep.equal({ valid: false });
   });
 
 });
