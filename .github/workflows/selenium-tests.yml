@@ -36,7 +36,7 @@ jobs:
 
       - name: Prepare artifacts
         run: |                          # Package important files into a compressed tar file
-          tar -czvf www-build.tar.gz ./package.json ./src/server.js ./src/utils ./src/data ./tests
+          tar -czvf www-build.tar.gz ./package.json ./src/server.js ./src ./tests
           ls -l                         # List files to confirm
 
       - name: Upload artifacts
