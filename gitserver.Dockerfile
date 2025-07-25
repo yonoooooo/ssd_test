@@ -20,7 +20,7 @@ WORKDIR /home/git
 RUN git init --bare ssdprac-repo.git && \
     cd ssdprac-repo.git && \
     git config user.name "JOSHUA CHOO SHENG XIONG" && \
-    git config user.email "2301788@sit.singaporetech.edu.sg"
+    git config user.email "2301788@SIT.singaporetech.edu.sg"
 
 
 ENTRYPOINT ["tini", "--", "git-http-server", "-p", "3000", "/home/git"]
