@@ -1,0 +1,29 @@
+# 👷 Workflow name shown in the GitHub Actions UI
+name: OWASP Dependency Check
+# 🔁 Trigger this workflow on push and pull request events
+on: [push, pull_request]
+
+jobs:
+  security-scan:  # 🛠️ Name of the job (you can choose any name)
+    runs-on: ubuntu-latest  # 🐧 Use the latest Ubuntu virtual machine to run this job
+
+    steps:
+      # 📦 Step 1: Checkout the code from your GitHub repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 🔍 Step 2: Run OWASP Dependency Check using the official GitHub Action
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "Practice Test scan"  # 🏷️ Just a label for the scan (can be anything you like)
+          path: "."                # 📁 This is the directory to scan (root of the repo)
+          format: "HTML"           # 📄 Generate an HTML report (you can also use XML or JSON)
+          out: "dependency-check-report"  # 📂 Folder where the report will be saved
+
+      # ⬆️ Step 3: Upload the report to GitHub as an artifact so you can download it
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dependency-Check-Report  # 🏷️ Name of the uploaded file in the GitHub UI
+          path: dependency-check-report  # 📂 Folder to upload (same as the output from above)

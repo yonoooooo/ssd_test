@@ -1,0 +1,124 @@
+# =========== META DATA ===========
+
+name: Node.js Selenium Testing          # Name of the workflow (will appear in the GitHub UI)
+
+on:                                     # Trigger conditions
+  push:
+    branches:
+      - main                           # Run when code is pushed to the 'main' branch
+  pull_request:
+    branches:
+      - main                           # Run when a pull request targets the 'main' branch
+
+
+# =========== JOBS ===========
+
+jobs:
+
+  # 1. Build Job - Prepares the code and packages it
+  build:
+
+    runs-on: ubuntu-latest              # Use latest Ubuntu VM to run this job
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2       # Downloads the repo code into the VM  (The branch depends on the trigger and is based on that branch)
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v4          # Speeds up builds by reusing installed node_modules
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-modules
+
+      - name: Install Node.js dependencies
+        run: npm install                # Installs required packages from package.json
+
+      - name: Prepare artifacts
+        run: |                          # Package important files into a compressed tar file
+          tar -czvf www-build.tar.gz ./package.json ./src/server.js ./src/utils ./src/data ./tests
+          ls -l                         # List files to confirm
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4   # Uploads the tar file so the next job can download it faster (caching)
+        with:
+          name: www-build
+          path: www-build.tar.gz
+
+
+
+  # 2. Test Job - Runs both unit and Selenium UI tests
+  test:
+
+    needs: build                        # Wait for the 'build' job to complete first
+
+    runs-on: ubuntu-latest              # Use Ubuntu VM to run this job
+
+    container:
+      image: node:20                    # Run tests inside a Node.js 20 container
+      ports:
+        - 80:80                           # Expose port 80 (used by the app)
+      options: --network-alias=testserver   # Give the container a network name 'testserver'
+
+    env:
+      TEST_BASE_URL: http://testserver       # Used by tests to reach the app
+      SELENIUM_HOST: http://selenium:4444/wd/hub   # Used to reach the Selenium browser server
+
+    services:
+      selenium:
+        image: selenium/standalone-chrome   # Spin up a Selenium container with headless Chrome
+        ports:
+          - 4444:4444                       # Expose Selenium on port 4444
+
+    steps:
+      - name: Download built files
+        uses: actions/download-artifact@v4   # Download the tar.gz file from 'build' job
+        with:
+          name: www-build
+
+      - name: Extract artifacts
+        run: |                               # Unpack the tar.gz file
+          tar -xzvf www-build.tar.gz
+          ls -l
+
+      - name: Install dependencies
+        run: npm install                    # Reinstall packages inside the container
+
+      - name: List node_modules
+        run: ls -l node_modules             # Debug check: confirm node_modules exist
+
+      - name: List files for debugging
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in the current directory:"
+          ls -ltra .
+          echo "Files in the src directory:"
+          ls -ltra src/
+          echo "Files in the tests directory:"
+          ls -ltra tests/
+      
+      # UNIT TESTS
+      - name: Run unit tests
+        run: npm test                       # Run Mocha unit tests defined in package.json (Specified "test": "mocha tests/*.js")
+      
+
+      # SELENIUM TESTS (UI Testing)
+      - name: Start Node.js server
+        run: |
+          nohup node src/server.js &       # Start the web app in the background
+          sleep 5                           # Wait 5 seconds for server to fully start
+
+      - name: Verify server is running
+        run: |
+          curl -f http://localhost || { echo "Server failed to start"; exit 1; }
+                                           # Use curl to check the app is live
+
+      - name: Wait for Selenium server to be up
+        run: |
+          for i in {1..10}; do             # Try to connect to Selenium up to 10 times
+            curl -s $SELENIUM_HOST && break || sleep 3
+          done
+
+      - name: Run Selenium tests
+        run: node tests/SeleniumTest.mjs github   # Run the browser automation test

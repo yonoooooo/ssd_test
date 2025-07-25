@@ -1,0 +1,59 @@
+# ================= METADATA =================
+
+name: ESLint Code Analysis                # Name of the GitHub Actions workflow
+on: [push, pull_request]                  # Run this workflow on every push or pull request
+
+
+# ================= MAIN JOB =================
+
+jobs:
+  eslint:                                 # Job name
+    runs-on: ubuntu-latest                # Run the job on the latest Ubuntu GitHub runner
+
+    permissions:    
+      actions: read
+      contents: read
+      security-events: write   # 🔑 REQUIRED for uploading SARIF to Security tab
+
+    steps:
+
+      # === Step 1: Checkout the repository ===
+      - name: Checkout Code
+        uses: actions/checkout@v4         # GitHub action to clone the repo into the runner
+
+      # === Step 2: Cache node_modules to speed up builds ===
+      - name: Cache Node.js modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules              # Folder to cache
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-modules
+
+      # === Step 3: Install Node.js project dependencies ===
+      - name: Install Node.js dependencies
+        run: npm install                  # Uses package.json to install dependencies
+
+      # === Step 4: Create the reports folder ===
+      - name: Create reports directory
+        run: mkdir -p reports             # Ensures the reports/ directory exists for output
+
+      # === Step 5: (Optional safety) Ensure ESLint SARIF formatter is installed ===
+      - name: Install ESLint SARIF Formatter
+        run: npm install @microsoft/eslint-formatter-sarif --save-dev
+
+      # === Step 6: Run ESLint with SARIF output ===
+      - name: Run ESLint with SARIF output
+        run: npx eslint . --format @microsoft/eslint-formatter-sarif --output-file reports/eslint-results.sarif || true
+        # Runs ESLint on all files
+        # Outputs a SARIF report to reports/eslint-results.sarif
+        # || true allows the workflow to continue even if lint errors exist
+
+      # === Step 7: Debug - Print SARIF content in GitHub logs (optional) ===
+      - name: Debug ESLint Output
+        run: cat reports/eslint-results.sarif || echo "No SARIF report generated"
+
+      # === Step 8: Upload SARIF report to GitHub Security tab ===
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/eslint-results.sarif    # Path to SARIF file to upload
